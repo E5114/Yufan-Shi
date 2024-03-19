@@ -1,0 +1,269 @@
+---
+title: "Chapter 56"
+author: "Yufan Shi"
+date: "2024-03-19"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+#Chapter 5
+
+##Question 1
+$$
+\begin{align*}
+    Var(\alpha X + (1 - \alpha)Y) = 
+    \alpha^2\cdot\sigma^2_X + (1 - \alpha)^2\cdot \sigma^2_Y + 2\alpha(1 - \alpha) \cdot \sigma_{XY}
+\end{align*}
+$$
+The first order condition respect to $\alpha$ is
+$$
+\begin{align*}
+    \frac{\partial}{\partial \alpha} = 2\alpha\sigma^2_X - 2\sigma^2_Y + 2\alpha \sigma^2_Y + 2\sigma_{XY} -4\alpha \sigma_{XY}\\
+\end{align*}
+$$
+So, we have:
+$$
+\begin{align*}
+    \alpha\sigma^2_X + \alpha\sigma^2_Y - 2\alpha\sigma_{XY} = \sigma^2_Y - \sigma_{XY}
+\end{align*}
+$$
+Finally ,we get:
+$$
+\begin{align*}
+    \alpha  = \frac{\sigma^2_Y - \sigma_{XY}}{\sigma^2_X + \sigma^2_Y - 2\sigma_{XY}}
+\end{align*}
+$$
+In order to show that is a minimum, we must have 
+$$\frac{\partial^2}{\partial \alpha^2} \geq 0$$
+$$
+\begin{align*}
+    \frac{\partial^2}{\partial \alpha^2} = \sigma^2_X + \sigma^2_Y - 2\sigma_{XY} = Var(X-Y) > 0
+\end{align*}
+$$
+##Question 2
+###section a
+The probability of it is $$1 - \frac{1}{n}$$
+###section b
+The probability of b is the same with a,which is 1 - $$1- \frac{1}{n}$$
+###section c
+For a single random selection, the probability of jth is not choosed is 
+$$1 - \frac{1}{n}$$
+###section d
+
+```{r}
+n <- 5
+prob <- 1- (1 - 1 / n)^n
+print(prob)
+```
+```{r}
+a <- 100
+prob1 <- 1 - (1 - 1 / a)^a
+print(prob1)
+```
+```{r}
+b <- 10000
+prob2 <- 1-(1 - 1 / b)^b
+print(prob2)
+```
+```{r}
+n <- sapply(1:100000,function(x) 1 - (1 - 1 / x)^x)
+plot(n,log = "x")
+```
+```{r}
+store <- rep(NA,10000)
+for(i in 1:10000){
+  store[i] <- sum(sample(1:100,rep = TRUE) ==4) > 0
+}
+mean(store)
+```
+the prob will approach 0.63 when n goes infinity.
+
+##Question 3 
+###section a
+We have the training data set, and we divide it into k parts,and the every part contains almost the same number of data points.
+Then we choose one part as the validation set and rest is the training sets. we do it k times.
+
+###section b
+
+####Validation set approach:
+Advantages:saving time and efficient
+Disadvantages:Because we use just a small portion of the whole data set, so we will overestimate the error rate of the test
+
+####LOOCV
+Advantages:we can train on the n - 1 data points
+Disadvantages:the difference between every training is small. with a high variance.
+
+##Question 7
+###section a
+```{r}
+library(ISLR)
+fit1 <- glm(Direction ~ Lag1 + Lag2, data = Weekly, family = "binomial")
+print(fit1)
+```
+###section b
+```{r}
+fit2 <- glm(Direction ~ Lag1 + Lag2, data = Weekly[-1, ], family = "binomial")
+print(fit2)
+```
+###section c
+```{r}
+prediction <-predict(fit2,newdata = Weekly[1, , drop = FALSE],type = "response") >0.5
+print(prediction)
+```
+###section d
+```{r}
+error <- numeric(nrow(Weekly))
+for ( i in 1:nrow(Weekly)) {
+  fit <- glm(Direction ~ Lag1 + Lag2, data = Weekly[-i, ],family = "binomial")
+  p <- predict(fit,newdata = Weekly[i, , drop = FALSE],type = "response") > 0.5
+  error[i] <- ifelse(p,"Down","Up") == Weekly$Direction[i]
+}
+```
+###section e
+```{r}
+mean(error)
+```
+
+#Chapter 6
+
+##Question 10
+###section a
+```{r}
+set.seed(47)
+data <- matrix(rnorm(1000 * 20), nrow = 1000)
+colnames(data) <-paste0("p",1:20)
+beta <- rep(0,20)
+beta[1:4] <- c(3,7,4,5)
+y <- colSums((t(data) * beta))  + rnorm(1000)
+data <- data.frame(data)
+data $ y <- y
+print(data)
+```
+
+###section b
+```{r}
+train <- data[1:100, ]
+test <- data[101:1000, ]
+print(train)
+print(test)
+```
+
+###section c
+```{r}
+library("leaps")
+fit <- regsubsets(y ~ .,data = train,nvmax = 20)
+summary(fit)
+plot(summary(fit)$rss/100,ylab = "MSE")
+```
+###section d
+```{r}
+predict.regsubsets <- function(object,newdata,id,...){
+ form <- as.formula(object $ call[[2]])
+ mat <-model.matrix(form,newdata)
+ coeff <- coef(object,id = id)
+ xvars <- names(coeff)
+ mat[, xvars] %*% coeff
+}
+mse <- sapply(1:20, function(i) mean((test$y - predict(fit, test, i))^2))
+plot(mse, ylab = "MSE")
+
+```
+###section e
+```{r}
+which.min(mse)
+```
+```{r}
+set.seed(42)
+data <- matrix(rnorm(1000 * 20), nrow = 1000)
+colnames(data) <- paste0("p", 1:20)
+beta <- rep(0, 20)
+beta[1:9] <- c(5, 4, 2, 7, 0.01, 0.001, 0.05, 0.1, 0.5)
+y <- colSums((t(data) * beta)) + rnorm(1000)
+data <- data.frame(data)
+data$y <- y
+train <- data[1:100, ]
+test <- data[101:1000, ]
+
+fit <- regsubsets(y ~ ., data = train, nvmax = 20)
+summary(fit)
+```
+```{r}
+mse <- sapply(1:20, function(i) mean((test$y - predict(fit, test, i))^2))
+plot(mse, ylab = "MSE")
+```
+```{r}
+which.min(mse)
+```
+### section f
+```{r}
+coef(fit,id = 5)
+```
+### section g
+```{r}
+names(beta) <- paste0("p", 1:20)
+p <- data.frame(id = names(beta), p = beta)
+
+out <- sapply(1:20, function(i) {
+  c <- coef(fit, id = i)[-1]
+  c <- data.frame(id = names(c), c = c)
+  m <- merge(p, c)
+  sqrt(sum((m$p - m$c)^2))
+})
+plot(out, ylab = "Mean squared coefficient error", type = "o", pch = 19)
+```
+##Question 11
+### section a
+```{r}
+library(MASS)
+set.seed(1)
+train <- sample(nrow(Boston), nrow(Boston) * 2 / 3)
+test <- setdiff(seq_len(nrow(Boston)), train)
+hist(log(Boston$crim))
+```
+### section b
+```{r}
+fit <- lm(log(crim) ~ ., data = Boston[train, ])
+mean((predict(fit, Boston[test, ]) - log(Boston$crim[test]))^2)
+```
+
+```{r}
+library(glmnet)
+mm <- model.matrix(log(crim) ~ ., data = Boston[train, ])
+fit2 <- cv.glmnet(mm, log(Boston$crim[train]), alpha = 0)
+p <- predict(fit2, model.matrix(log(crim) ~ ., data = Boston[test, ]), s = fit2$lambda.min)
+mean((p - log(Boston$crim[test]))^2)
+```
+
+```{r}
+mm <- model.matrix(log(crim) ~ ., data = Boston[train, ])
+fit3 <- cv.glmnet(mm, log(Boston$crim[train]), alpha = 1)
+p <- predict(fit3, model.matrix(log(crim) ~ ., data = Boston[test, ]), s = fit3$lambda.min)
+mean((p - log(Boston$crim[test]))^2)
+```
+```{r}
+library(pls)
+fit4 <- pcr(log(crim) ~ ., data = Boston[train, ], scale = TRUE, validation = "CV")
+validationplot(fit4, val.type = "MSEP")
+```
+
+```{r}
+p <- predict(fit4, Boston[test, ], ncomp = 8)
+mean((p - log(Boston$crim[test]))^2)
+```
+```{r}
+fit5 <- plsr(log(crim) ~ ., data = Boston[train, ], scale = TRUE, validation = "CV")
+validationplot(fit5, val.type = "MSEP")
+```
+```{r}
+coef(fit3, s = fit3$lambda.min)
+```
+
+
+
+
+
+
+
+
+
